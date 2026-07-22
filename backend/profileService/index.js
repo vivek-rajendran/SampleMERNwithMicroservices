@@ -1,80 +1,81 @@
 const express = require('express');
 const mongoose = require('mongoose');
-require('dotenv').config()
-var cors = require('cors')
-
+require('dotenv').config();
+const cors = require('cors');
 
 const app = express();
-const port = process.env.PORT;
 
-mongoose.connect(process.env.MONGO_URL, { useNewUrlParser: true, useUnifiedTopology: true });
+// Fallback defaults for local execution
+const PORT = process.env.PORT || 5001;
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://host.docker.internal:27017/streaming-db';
 
 app.use(express.json());
-app.use(cors())
+app.use(cors());
 
+// Connect to MongoDB
+mongoose.connect(MONGO_URL)
+  .then(() => console.log('Connected to MongoDB successfully'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
-app.get('/health', (req,res)=>{
-    res.send({status: 'OK'})
-})
+// Health check
+app.get('/health', (req, res) => {
+  res.send({ status: 'OK' });
+});
 
-const userSchema = mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-        minlength: 1,
-        maxlength: 200
-    },
-    age: {
-        type: Number,
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now()
+// User Schema
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    minlength: 1,
+    maxlength: 200
+  },
+  age: {
+    type: Number,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const User = mongoose.model('user', userSchema);
+
+// Add User endpoint
+app.post('/addUser', async (req, res) => {
+  try {
+    const { name, age } = req.body;
+    if (!name || !age) {
+      return res.status(400).json({ error: "Both name and age are required." });
     }
-})
-const User = mongoose.model('user', userSchema)
 
-app.post('/addUser', async (req,res)=>{
-    try {
-        const { name, age } = req.body;
-        if (!name || !age) {
-          return res
-            .status(400)
-            .json({ error: "Both name and age are required." });
-        }
-        const existingUser = await User.find({name: name});
-        if (!existingUser) {
-          return res.status(404).json({ error: "User not found." });
-        }
-        const newuser = new User({
-          name,
-          age,
-        });
-        const savedUser = await newuser.save();
-        res.status(201).json({ msg: "User Added Successfully" });
-      } catch (err) {
-        console.error(err);
-        res.status(500).json({ err: "Internal Server Error" });
-      }
-})
+    const existingUser = await User.findOne({ name });
+    if (existingUser) {
+      return res.status(409).json({ error: "User already exists." });
+    }
 
-app.get('/fetchUser', async (req,res)=>{
-    try {
-        console.log(req.body);
-        let user = await User.find({});
-        console.log(user);
-        if (user) {
-          res.send(user);
-        } else {
-          res.send({ msg: "User doesn't exist" });
-        }
-      } catch (err) {
-        console.error(err);
-        res.status(500).send({ msg: "Something went wrong" });
-      }
-})
+    const newUser = new User({ name, age });
+    await newUser.save();
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+    res.status(201).json({ msg: "User Added Successfully", user: newUser });
+  } catch (err) {
+    console.error('Error adding user:', err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Fetch Users endpoint
+app.get('/fetchUser', async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.status(200).json(users);
+  } catch (err) {
+    console.error('Error fetching users:', err);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
