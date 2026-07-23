@@ -75,9 +75,11 @@ pipeline {
     post {
         success {
             echo "CI/CD Pipeline executed successfully! EKS updated with build #${BUILD_NUMBER}."
+            sh "aws sns publish --topic-arn arn:aws:sns:us-east-1:629161161381:mern-deployment-notifications --message 'SUCCESS: Build #${BUILD_NUMBER} for MERN Microservices deployed successfully to EKS!'"
         }
         failure {
             echo "Pipeline failed. Check Console Output for details."
+            sh "aws sns publish --topic-arn arn:aws:sns:us-east-1:629161161381:mern-deployment-notifications --message 'FAILURE: Build #${BUILD_NUMBER} for MERN Microservices failed during execution!'"
         }
     }
 }
