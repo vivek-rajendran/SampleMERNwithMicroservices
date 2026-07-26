@@ -1,0 +1,11 @@
+awsAccountId: "629161161381"
+region: "ap-south-1"
+
+images:
+  hello: "629161161381.dkr.ecr.ap-south-1.amazonaws.com/streaming-app-hello-service:latest"
+  profile: "629161161381.dkr.ecr.ap-south-1.amazonaws.com/streaming-app-profile-service:latest"
+  frontend: "629161161381.dkr.ecr.ap-south-1.amazonaws.com/streaming-app-frontend:latest"
+
+mongo:
+  image: "mongo:latest"
+  url: "mongodb://mongo-service:27017/streaming-db"
